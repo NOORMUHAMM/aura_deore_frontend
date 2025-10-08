@@ -1,13 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌟 Custom global styles */
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+
+  @apply bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300;
+  font-family: "Inter", system-ui, sans-serif;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+html {
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
+
+/* Example for product cards */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition hover:shadow-lg;
+}
+
+/* Primary button */
+.btn-primary {
+  @apply px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition;
+}
+
+/* Outline button */
+.btn-outline {
+  @apply px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+         hover:bg-gray-100 dark:hover:bg-gray-700 transition;
+}
+
+/* Smooth header/footer transition */
+header, footer {
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.bg-hot-deals {
+  background-image: url('../public/hot-deals-bg.svg');
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* hide scrollbars (webkit + firefox + IE) */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* optional helpful utility if you don't have tailwind's line-clamp plugin:
+   simple fallback truncation for 1-2 lines (not perfect like line-clamp plugin) */
+.line-clamp-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes borderGlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-borderGlow {
+  animation: borderGlow 3s linear infinite;
+}
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-flow {
+  background-size: 200% 200%;
+  animation: gradient-flow 5s ease infinite;
+}
+
+
