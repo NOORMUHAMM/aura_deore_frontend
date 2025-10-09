@@ -10,6 +10,7 @@ import Footer from "./components/Footer";
 import ContactUs from "./pages/ContactUs";
 import ShippingReturns from "./pages/ShippingReturns";
 import FAQs from "./pages/FAQs";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Admin imports
 import { isLoggedIn } from "./utils/auth";
@@ -43,6 +44,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
        <div className="flex-1">
+       <ScrollToTop />
       <Routes>
         {/* Public site */}
         <Route

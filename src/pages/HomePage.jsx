@@ -6,6 +6,9 @@ import { addToCart } from "../utils/cart";
 
 export default function HomePage({ onAddToCart }) {
   const [deals, setDeals] = useState([]);
+  const [loadingDeals, setLoadingDeals] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
 
   
   const [products, setProducts] = useState([]);
@@ -25,24 +28,46 @@ export default function HomePage({ onAddToCart }) {
   const rafRef = useRef(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchJSON(`${API_BASE}/deals`, []).then((d) => {
-      setDeals(Array.isArray(d) ? d : d.items ?? d ?? []);
-    });
+  // useEffect(() => {
+  //   fetchJSON(`${API_BASE}/deals`, []).then((d) => {
+  //     setDeals(Array.isArray(d) ? d : d.items ?? d ?? []);
+  //   });
 
-    fetchJSON(`${API_BASE}/discounts`, []).then((d) => {
-      setDiscount(d)
-    });
-    fetchJSON(`${API_BASE}/products?limit=200`, { items: [] }).then((data) => {
-      const items = data.items || data || [];
-      setProducts(items);
-      setFilteredProducts(items);
-    });
+  //   fetchJSON(`${API_BASE}/discounts`, []).then((d) => {
+  //     setDiscount(d)
+  //   });
+  //   fetchJSON(`${API_BASE}/products?limit=200`, { items: [] }).then((data) => {
+  //     const items = data.items || data || [];
+  //     setProducts(items);
+  //     setFilteredProducts(items);
+  //   });
 
-    return () => clearTimeout(toastTimeoutRef.current);
-  }, []);
+  //   return () => clearTimeout(toastTimeoutRef.current);
+  // }, []);
 
   // auto-scroll hot deals row
+  useEffect(() => {
+    setLoadingDeals(true);
+    setLoadingProducts(true);
+  
+    fetchJSON(`${API_BASE}/deals`, [])
+      .then((d) => setDeals(Array.isArray(d) ? d : d.items ?? d ?? []))
+      .finally(() => setLoadingDeals(false));
+  
+    fetchJSON(`${API_BASE}/discounts`, []).then((d) => setDiscount(d));
+  
+    fetchJSON(`${API_BASE}/products?limit=200`, { items: [] })
+      .then((data) => {
+        const items = data.items || data || [];
+        setProducts(items);
+        setFilteredProducts(items);
+      })
+      .finally(() => setLoadingProducts(false));
+  
+    return () => clearTimeout(toastTimeoutRef.current);
+  }, []);
+  
+  
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -342,7 +367,21 @@ export default function HomePage({ onAddToCart }) {
           <p className="text-white/90 max-w-2xl mx-auto text-center mb-12">Click a deal to view a sticky mini-carousel of matched products below.</p>
 
           <div ref={scrollRef} onMouseEnter={() => (pauseRef.current = true)} onMouseLeave={() => (pauseRef.current = false)} onTouchStart={() => (pauseRef.current = true)} onTouchEnd={() => (pauseRef.current = false)} className="grid grid-cols-1 gap-6 md:flex md:gap-6 md:overflow-x-auto md:items-start no-scrollbar scroll-smooth pb-4">
-            {deals.map((d, i) => {
+            {loadingDeals
+  ? Array.from({ length: 4 }).map((_, i) => (
+      <div
+        key={i}
+        className="animate-pulse bg-white dark:bg-gray-900 rounded-xl shadow-lg md:min-w-[300px] p-6"
+        //  className="skeleton h-6 w-1/2 ..." 
+      > 
+
+        <div className="h-6 w-1/2 bg-gray-300 dark:bg-gray-700 rounded mb-3"></div>
+        <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
+        <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-600 rounded mb-4"></div>
+        <div className="h-10 w-24 bg-gray-300 dark:bg-gray-700 rounded"></div>
+      </div>
+    ))
+  :deals.map((d, i) => {
               const key = dealKey(d, i);
               const isActive = activeDealKey === key;
               return (
@@ -420,7 +459,19 @@ export default function HomePage({ onAddToCart }) {
         </motion.h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {filteredProducts.slice(0, visibleCount).map((p, i) => (
+          {loadingProducts
+  ? Array.from({ length: 8 }).map((_, i) => (
+      <div
+        key={i}
+        className="animate-pulse bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-4"
+      >
+        <div className="h-56 bg-gray-300 dark:bg-gray-700 mb-4 rounded"></div>
+        <div className="h-5 w-3/4 bg-gray-300 dark:bg-gray-600 mb-2 rounded"></div>
+        <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 mb-2 rounded"></div>
+        <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      </div>
+    ))
+  :filteredProducts.slice(0, visibleCount).map((p, i) => (
             <motion.div key={p._id ?? p.id} variants={cardVariants} initial="hidden" whileInView="visible" viewport={{ once: false, amount: 0.2 }} transition={{ delay: i * 0.05 }} className="relative bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden group hover:shadow-xl transition-all" whileHover={{ y: -8, scale: 1.03, transition: { type: "spring", stiffness: 100, damping: 10 } }}>
               <div className="relative">
                 <img src={imageUrl(p.images?.[0]) || "/prod-placeholder.jpg"} alt={p.name} className="w-full h-56 object-cover transition-transform duration-300 group-hover:scale-105" />
