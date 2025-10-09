@@ -3,6 +3,9 @@ import { fetchJSON, API_BASE, imageUrl } from "../utils/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { addToCart } from "../utils/cart";
+import { useQuery } from "@tanstack/react-query";
+
+
 
 export default function HomePage({ onAddToCart }) {
   const [deals, setDeals] = useState([]);
@@ -10,7 +13,7 @@ export default function HomePage({ onAddToCart }) {
   const [loadingProducts, setLoadingProducts] = useState(true);
 
 
-  
+
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [visibleCount, setVisibleCount] = useState(12);
@@ -46,28 +49,64 @@ export default function HomePage({ onAddToCart }) {
   // }, []);
 
   // auto-scroll hot deals row
+  // useEffect(() => {
+  //   setLoadingDeals(true);
+  //   setLoadingProducts(true);
+
+  //   fetchJSON(`${API_BASE}/deals`, [])
+  //     .then((d) => setDeals(Array.isArray(d) ? d : d.items ?? d ?? []))
+  //     .finally(() => setLoadingDeals(false));
+
+  //   fetchJSON(`${API_BASE}/discounts`, []).then((d) => setDiscount(d));
+
+  //   fetchJSON(`${API_BASE}/products?limit=200`, { items: [] })
+  //     .then((data) => {
+  //       const items = data.items || data || [];
+  //       setProducts(items);
+  //       setFilteredProducts(items);
+  //     })
+  //     .finally(() => setLoadingProducts(false));
+
+  //   return () => clearTimeout(toastTimeoutRef.current);
+  // }, []);
+
+  // ✅ React Query hooks (renamed to avoid name conflicts)
+  const { data: dealsData = [], isLoading: dealsLoading } = useQuery({
+    queryKey: ["deals"],
+    queryFn: async () => {
+      const d = await fetchJSON(`${API_BASE}/deals`, []);
+      return Array.isArray(d) ? d : d.items ?? d ?? [];
+    },
+    staleTime: 5 * 60 * 1000,  // 5 min
+    cacheTime: 15 * 60 * 1000, // 15 min
+
+  });
+
+  const { data: discountsData = [], isLoading: discountsLoading } = useQuery({
+    queryKey: ["discounts"],
+    queryFn: async () => fetchJSON(`${API_BASE}/discounts`, []),
+    staleTime: 5 * 60 * 1000,  // 5 min
+    cacheTime: 15 * 60 * 1000, // 15 min
+
+  });
+
+  const { data: productsData = { items: [] }, isLoading: productsLoading } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => fetchJSON(`${API_BASE}/products?limit=200`, { items: [] }),
+    staleTime: 5 * 60 * 1000,  // 5 min
+    cacheTime: 15 * 60 * 1000, // 15 min
+
+  });
   useEffect(() => {
-    setLoadingDeals(true);
-    setLoadingProducts(true);
-  
-    fetchJSON(`${API_BASE}/deals`, [])
-      .then((d) => setDeals(Array.isArray(d) ? d : d.items ?? d ?? []))
-      .finally(() => setLoadingDeals(false));
-  
-    fetchJSON(`${API_BASE}/discounts`, []).then((d) => setDiscount(d));
-  
-    fetchJSON(`${API_BASE}/products?limit=200`, { items: [] })
-      .then((data) => {
-        const items = data.items || data || [];
-        setProducts(items);
-        setFilteredProducts(items);
-      })
-      .finally(() => setLoadingProducts(false));
-  
-    return () => clearTimeout(toastTimeoutRef.current);
-  }, []);
-  
-  
+    const items = productsData.items || productsData || [];
+    setProducts(items);
+    setFilteredProducts(items);
+    setDeals(dealsData);
+    setDiscount(discountsData);
+  }, [productsData, dealsData, discountsData]);
+
+
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -107,25 +146,25 @@ export default function HomePage({ onAddToCart }) {
   //   return NaN;
   // };
   const parseDiscount = (val) => {
-  if (val == null) return NaN;
+    if (val == null) return NaN;
 
-  if (typeof val === "number") return val;
+    if (typeof val === "number") return val;
 
-  if (typeof val === "string") {
-    const m = val.match(/(\d+(\.\d+)?)/); // capture number even in messy text
-    return m ? Number(m[1]) : NaN;
-  }
-
-  if (typeof val === "object") {
-    if (Array.isArray(val) && val.length) return parseDiscount(val[0]);
-    for (const key of Object.keys(val)) {
-      const nested = parseDiscount(val[key]);
-      if (!isNaN(nested)) return nested;
+    if (typeof val === "string") {
+      const m = val.match(/(\d+(\.\d+)?)/); // capture number even in messy text
+      return m ? Number(m[1]) : NaN;
     }
-  }
 
-  return NaN;
-};
+    if (typeof val === "object") {
+      if (Array.isArray(val) && val.length) return parseDiscount(val[0]);
+      for (const key of Object.keys(val)) {
+        const nested = parseDiscount(val[key]);
+        if (!isNaN(nested)) return nested;
+      }
+    }
+
+    return NaN;
+  };
 
 
   const computeProductDiscount = (p) => {
@@ -177,11 +216,10 @@ export default function HomePage({ onAddToCart }) {
 
   const GlowBorder = ({ theme = "light" }) => (
     <span
-      className={`absolute inset-0 rounded-lg bg-gradient-to-r ${
-        theme === "dark"
+      className={`absolute inset-0 rounded-lg bg-gradient-to-r ${theme === "dark"
           ? "from-indigo-500 via-blue-400 to-purple-500"
           : "from-pink-500 via-amber-400 to-red-500"
-      } bg-[length:200%_200%] animate-borderGlow opacity-80`}
+        } bg-[length:200%_200%] animate-borderGlow opacity-80`}
       style={{
         maskImage: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
         WebkitMaskComposite: "xor",
@@ -200,75 +238,75 @@ export default function HomePage({ onAddToCart }) {
   // helper to make stable key for deals
   const dealKey = (deal, idx) => deal?._id ?? deal?.id ?? `deal-${idx}`;
   const handleDealClick = (deal, idx) => {
-  const key = dealKey(deal, idx);
+    const key = dealKey(deal, idx);
 
-  // Collapse if same deal clicked again
-  if (activeDealKey === key) {
-    setActiveDealKey(null);
+    // Collapse if same deal clicked again
+    if (activeDealKey === key) {
+      setActiveDealKey(null);
+      setDiscountProducts([]);
+      return;
+    }
+
+    setActiveDealKey(key);
+
+    // Extract discount number from deal.subtitle or title
+    const extractDiscount = (text) => {
+      if (!text) return NaN;
+      const match = String(text).match(/(\d+(\.\d+)?)/);
+      return match ? Number(match[1]) : NaN;
+    };
+
+    const discNum =
+      extractDiscount(deal?.discount) ||
+      extractDiscount(deal?.subtitle) ||
+      extractDiscount(deal?.title);
+
+    // If we got a valid discount number, match products with similar discount
+    if (!isNaN(discNum)) {
+      const matched = products.filter((p) => {
+        const pd = computeProductDiscount(p);
+        const explicit = parseDiscount(p.discount ?? p.off ?? p.salePercent);
+        const discountValue = !isNaN(explicit) ? explicit : pd;
+
+        return !isNaN(discountValue) && Math.abs(discountValue - discNum) <= 3;
+      });
+
+      setDiscountProducts(matched);
+      showToast(
+        matched.length
+          ? `Showing ${matched.length} products for ${discNum}% OFF 🎉`
+          : `No products found for ${discNum}% OFF 😔`
+      );
+
+      setTimeout(() => {
+        carouselTrackRef.current?.scrollTo?.({ left: 0, behavior: "smooth" });
+        carouselRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+      }, 100);
+
+      return;
+    }
+
+    // If no discount found in text, fallback to keyword match (rare)
+    const keyword = (deal.title ?? deal.subtitle ?? "").toLowerCase();
+    if (keyword.length >= 2) {
+      const matched = products.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(keyword) ||
+          p.title?.toLowerCase().includes(keyword)
+      );
+      setDiscountProducts(matched);
+      showToast(
+        matched.length
+          ? `Showing ${matched.length} matching products`
+          : "No products found for this deal"
+      );
+      return;
+    }
+
+    // No match
     setDiscountProducts([]);
-    return;
-  }
-
-  setActiveDealKey(key);
-
-  // Extract discount number from deal.subtitle or title
-  const extractDiscount = (text) => {
-    if (!text) return NaN;
-    const match = String(text).match(/(\d+(\.\d+)?)/);
-    return match ? Number(match[1]) : NaN;
+    showToast("No products found for this deal 😔");
   };
-
-  const discNum =
-    extractDiscount(deal?.discount) ||
-    extractDiscount(deal?.subtitle) ||
-    extractDiscount(deal?.title);
-
-  // If we got a valid discount number, match products with similar discount
-  if (!isNaN(discNum)) {
-    const matched = products.filter((p) => {
-      const pd = computeProductDiscount(p);
-      const explicit = parseDiscount(p.discount ?? p.off ?? p.salePercent);
-      const discountValue = !isNaN(explicit) ? explicit : pd;
-
-      return !isNaN(discountValue) && Math.abs(discountValue - discNum) <= 3;
-    });
-
-    setDiscountProducts(matched);
-    showToast(
-      matched.length
-        ? `Showing ${matched.length} products for ${discNum}% OFF 🎉`
-        : `No products found for ${discNum}% OFF 😔`
-    );
-
-    setTimeout(() => {
-      carouselTrackRef.current?.scrollTo?.({ left: 0, behavior: "smooth" });
-      carouselRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-    }, 100);
-
-    return;
-  }
-
-  // If no discount found in text, fallback to keyword match (rare)
-  const keyword = (deal.title ?? deal.subtitle ?? "").toLowerCase();
-  if (keyword.length >= 2) {
-    const matched = products.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(keyword) ||
-        p.title?.toLowerCase().includes(keyword)
-    );
-    setDiscountProducts(matched);
-    showToast(
-      matched.length
-        ? `Showing ${matched.length} matching products`
-        : "No products found for this deal"
-    );
-    return;
-  }
-
-  // No match
-  setDiscountProducts([]);
-  showToast("No products found for this deal 😔");
-};
 
 
 
@@ -367,39 +405,39 @@ export default function HomePage({ onAddToCart }) {
           <p className="text-white/90 max-w-2xl mx-auto text-center mb-12">Click a deal to view a sticky mini-carousel of matched products below.</p>
 
           <div ref={scrollRef} onMouseEnter={() => (pauseRef.current = true)} onMouseLeave={() => (pauseRef.current = false)} onTouchStart={() => (pauseRef.current = true)} onTouchEnd={() => (pauseRef.current = false)} className="grid grid-cols-1 gap-6 md:flex md:gap-6 md:overflow-x-auto md:items-start no-scrollbar scroll-smooth pb-4">
-            {loadingDeals
-  ? Array.from({ length: 4 }).map((_, i) => (
-      <div
-        key={i}
-        className="animate-pulse bg-white dark:bg-gray-900 rounded-xl shadow-lg md:min-w-[300px] p-6"
-        //  className="skeleton h-6 w-1/2 ..." 
-      > 
+            {dealsLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse bg-white dark:bg-gray-900 rounded-xl shadow-lg md:min-w-[300px] p-6"
+                //  className="skeleton h-6 w-1/2 ..." 
+                >
 
-        <div className="h-6 w-1/2 bg-gray-300 dark:bg-gray-700 rounded mb-3"></div>
-        <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
-        <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-600 rounded mb-4"></div>
-        <div className="h-10 w-24 bg-gray-300 dark:bg-gray-700 rounded"></div>
-      </div>
-    ))
-  :deals.map((d, i) => {
-              const key = dealKey(d, i);
-              const isActive = activeDealKey === key;
-              return (
-                <motion.div key={key} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, type: "spring", stiffness: 90 }} viewport={{ once: true }} onClick={() => handleDealClick(d, i)} className={`relative group bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition transform md:min-w-[300px] cursor-pointer ${isActive ? "ring-4 ring-amber-400" : ""}`}>
-                  {d.discount && <span className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow animate-bounce">-{d.discount}%</span>}
+                  <div className="h-6 w-1/2 bg-gray-300 dark:bg-gray-700 rounded mb-3"></div>
+                  <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
+                  <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-600 rounded mb-4"></div>
+                  <div className="h-10 w-24 bg-gray-300 dark:bg-gray-700 rounded"></div>
+                </div>
+              ))
+              : deals.map((d, i) => {
+                const key = dealKey(d, i);
+                const isActive = activeDealKey === key;
+                return (
+                  <motion.div key={key} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, type: "spring", stiffness: 90 }} viewport={{ once: true }} onClick={() => handleDealClick(d, i)} className={`relative group bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition transform md:min-w-[300px] cursor-pointer ${isActive ? "ring-4 ring-amber-400" : ""}`}>
+                    {d.discount && <span className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow animate-bounce">-{d.discount}%</span>}
 
-                  <div className="p-6">
-                    <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 line-clamp-1">{d.title}</h3>
-                    <p className="text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">{d.subtitle}</p>
+                    <div className="p-6">
+                      <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 line-clamp-1">{d.title}</h3>
+                      <p className="text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">{d.subtitle}</p>
 
-                    <motion.div className="relative inline-block mt-4 px-5 py-2 rounded-lg text-white font-semibold overflow-hidden" whileHover={{ scale: 1.05 }}>
-                      <GlowBorder theme="light" />
-                      <span className="relative z-10">View {d.discount} OFF →</span>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                      <motion.div className="relative inline-block mt-4 px-5 py-2 rounded-lg text-white font-semibold overflow-hidden" whileHover={{ scale: 1.05 }}>
+                        <GlowBorder theme="light" />
+                        <span className="relative z-10">View {d.discount} OFF →</span>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                );
+              })}
           </div>
 
           {/* sticky mini-carousel below deals */}
@@ -459,19 +497,12 @@ export default function HomePage({ onAddToCart }) {
         </motion.h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {loadingProducts
-  ? Array.from({ length: 8 }).map((_, i) => (
-      <div
-        key={i}
-        className="animate-pulse bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-4"
-      >
-        <div className="h-56 bg-gray-300 dark:bg-gray-700 mb-4 rounded"></div>
-        <div className="h-5 w-3/4 bg-gray-300 dark:bg-gray-600 mb-2 rounded"></div>
-        <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 mb-2 rounded"></div>
-        <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded"></div>
-      </div>
-    ))
-  :filteredProducts.slice(0, visibleCount).map((p, i) => (
+          {productsLoading ? (
+            // 🩶 Skeleton loader shown while products load
+            [...Array(8)].map((_, i) => (
+              <div key={i} className="skeleton h-72 rounded-xl"></div>
+            ))
+          ) : filteredProducts.slice(0, visibleCount).map((p, i) => (
             <motion.div key={p._id ?? p.id} variants={cardVariants} initial="hidden" whileInView="visible" viewport={{ once: false, amount: 0.2 }} transition={{ delay: i * 0.05 }} className="relative bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden group hover:shadow-xl transition-all" whileHover={{ y: -8, scale: 1.03, transition: { type: "spring", stiffness: 100, damping: 10 } }}>
               <div className="relative">
                 <img src={imageUrl(p.images?.[0]) || "/prod-placeholder.jpg"} alt={p.name} className="w-full h-56 object-cover transition-transform duration-300 group-hover:scale-105" />
