@@ -69,7 +69,21 @@ export default function CartDrawer({ open, onClose }) {
     return lines.join("\n");
   };
 
-  // ✅ Download PDF Receipt
+  // ✅ Increase or decrease quantity
+const handleQuantityChange = (id, change) => {
+  const updated = cart
+    .map((item) => {
+      if (item._id === id) {
+        const newQty = Math.max(0, item.qty + change);
+        return { ...item, qty: newQty };
+      }
+      return item;
+    })
+    .filter((i) => i.qty > 0); // auto-remove if qty becomes 0
+
+  updateCart(updated);
+};
+
   // const handleDownloadReceipt = () => {
   //   const doc = new jsPDF();
   //   const date = new Date().toLocaleString("en-IN", {
@@ -329,6 +343,32 @@ const handleDownloadReceipt = () => {
                   Your cart is empty 😔
                 </p>
               ) : (
+                // cart.map((item) => (
+                //   <div
+                //     key={item._id}
+                //     className="flex items-center gap-4 mb-4 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg"
+                //   >
+                //     <img
+                //       src={imageUrl(item.images?.[0]) || "/prod-placeholder.jpg"}
+                //       alt={item.name}
+                //       className="w-16 h-16 object-cover rounded"
+                //     />
+                //     <div className="flex-1">
+                //       <h3 className="font-semibold text-gray-800 dark:text-gray-100 line-clamp-1">
+                //         {item.name}
+                //       </h3>
+                //       <p className="text-sm text-gray-600 dark:text-gray-400">
+                //         ${item.price.toFixed(2)} × {item.qty}
+                //       </p>
+                //     </div>
+                //     <button
+                //       onClick={() => removeItem(item._id)}
+                //       className="text-red-500 hover:text-red-700 text-sm"
+                //     >
+                //       ✖
+                //     </button>
+                //   </div>
+                // ))
                 cart.map((item) => (
                   <div
                     key={item._id}
@@ -339,14 +379,35 @@ const handleDownloadReceipt = () => {
                       alt={item.name}
                       className="w-16 h-16 object-cover rounded"
                     />
+                
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-800 dark:text-gray-100 line-clamp-1">
                         {item.name}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        ${item.price.toFixed(2)} × {item.qty}
+                        ${item.price.toFixed(2)}
                       </p>
+                
+                      {/* ➕ Quantity Controls */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => handleQuantityChange(item._id, -1)}
+                          className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-gray-800 dark:text-gray-100 font-medium">
+                          {item.qty}
+                        </span>
+                        <button
+                          onClick={() => handleQuantityChange(item._id, 1)}
+                          className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-600 text-white transition"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
+                
                     <button
                       onClick={() => removeItem(item._id)}
                       className="text-red-500 hover:text-red-700 text-sm"
@@ -355,6 +416,8 @@ const handleDownloadReceipt = () => {
                     </button>
                   </div>
                 ))
+                
+
               )}
             </div>
 
